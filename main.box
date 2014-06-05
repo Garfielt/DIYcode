@@ -1,0 +1,122 @@
+Dim httpd,host,VerName,VerNum,Mhome,Murl
+VerName = "MAC扫描管控系统服务器端"
+VerNum="1.0"
+Mhome="liuwt123.corp.haier.com"
+Murl="127.0.0.1"
+Shell.Service.Icon = "qm.gif"
+Shell.Service.RunService "MacSrv", VerName&" Ver"&VerNum, VerName&" Ver"&VerNum
+Sub OnServiceStart()
+	Set httpd = NetBox.CreateObject("NetBox.HttpServer")
+		If httpd.Create("", 80)=0 then
+			set host = httpd.AddHost("", "\")
+			host.EnableScript = true
+			host.AddDefault "index.html"
+			host.AddDefault "index.htm"
+			host.AddDefault "index.asp"
+			host.AddDefault "default.asp"
+			httpd.Start
+		end if
+	Shell.Service.AppendCommand "150","数据目录(&R)"
+	if Shell.Service.Installed then
+		Shell.Service.AppendCommand "152","卸载服务(&D)"
+	else
+		Shell.Service.AppendCommand "151","安装为服务(&I)"
+	end if
+	Shell.Service.AppendCommand "153","管理维护(&M)"
+	Shell.Service.AppendCommand "-1",""
+	Shell.Service.AppendCommand "160","启动服务(&S)"
+	Shell.Service.AppendCommand "161","暂停服务(&P)"
+	Shell.Service.AppendCommand "162","重启服务(&R)"
+	Shell.Service.AppendCommand "-1",""
+	Shell.Service.AppendCommand "170","检查更新(&U)"
+	Shell.Service.AppendCommand "172","使用帮助(&H)"
+	Shell.Service.AppendCommand "171","关于软件(&A)"
+End Sub
+Sub OnServiceCommand(n)
+	Select Case n
+		Case 150
+			Shell.Execute NetBox.ApplicationPath&"\data"
+		Case 151
+			if instr(NetBox.SysInfo("OS_Platform"),"LongHorn")>0 then
+				Shell.MsgBox "对不起，该操作系统尚且不支持此功能！","",48
+			else
+				Shell.Service.Install
+				Shell.MsgBox "服务安装成功！"&vbcrlf&"服务即将重启，请稍后...","",64
+				Shell.Service.Restart
+			end if
+		Case 152
+			Shell.Service.Remove:Shell.MsgBox "服务卸载成功！"&vbcrlf&"服务即将重启，请稍后...","",64
+			Shell.Service.Restart
+		Case 153
+			if CreateObject("NetBox.Socket").Connect(Murl, 80)=0 then
+				ShowManage()
+			else
+				Shell.MsgBox "对不起，网络连接失败！请检查服务器端是否运行正常！","",48
+			end if
+		Case 171
+		Case 160
+			httpd.Start
+			Shell.Service.Icon = "on.gif"
+		Case 161
+			httpd.Stop
+			Shell.Service.Icon = "off.gif"
+		Case 162
+			Shell.Service.Restart
+		Case 170
+			if CreateObject("NetBox.Socket").Connect(Mhome, 80)=0 then
+				ShowHtmlView()
+			else
+				Shell.MsgBox "对不起，网络连接失败！","",48
+			end if
+		Case 171
+			Shell.MsgBox VerName&" Ver"&VerNum&"  "&vbcrlf&"程序制作：刘卫涛  "&vbcrlf&"Email：liuweitao@haier.com  "&vbcrlf&"欢迎使用反馈!  ","关于软件",64
+		Case 172
+			if NetBox.FileSystem.FileExists("使用帮助.txt") then
+				Shell.Execute "使用帮助.txt"
+			else
+				Shell.MsgBox "错误：使用帮助文件不存在！","",48
+			end if
+		Case Else
+			
+		Exit Sub
+	End Select
+End Sub
+Sub OnServiceStop()
+	httpd.Close
+	Shell.Halt 0
+	Shell.Quit 0
+End Sub
+Sub OnServicePause()
+	httpd.Stop
+End Sub
+Sub OnServiceResume()
+	httpd.Start
+End Sub
+Sub ShowHtmlView()
+	Set ht = CreateObject("NetBox.HtmlWindow")
+	ht.Icon = "ico.gif"
+	ht.center
+	ht.scrollbar = true
+	ht.ContextMenu = false
+	ht.MaximizeBox = false
+	ht.MinimizeBox = true
+	ht.width = 600
+	ht.height = 420
+	ht.open "http://10.135.106.101/TISS/"
+	ht.showDialog
+	set ht=nothing
+End Sub
+Sub ShowManage()
+	Set ht = CreateObject("NetBox.HtmlWindow")
+	ht.Icon = "QM.gif"
+	ht.center
+	ht.scrollbar = true
+	ht.ContextMenu = false
+	ht.MaximizeBox = false
+	ht.MinimizeBox = true
+	ht.width = 1000
+	ht.height = 700
+	ht.open "http://127.0.0.1/login.asp"
+	ht.showDialog
+	set ht=nothing
+End Sub
